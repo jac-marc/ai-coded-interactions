@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* app/globals.css (or your main CSS file) */
+/* Ensure Tailwind base/components/utilities are imported first */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Basic styles for react-masonry-css */
+/* .my-masonry-grid is applied to the Masonry component */
+/* .my-masonry-grid {
+  display: flex;
+  margin-left: -16px; /* Adjust based on column padding below */
+  /* width: auto; */
+/* } */
+
+/* .my-masonry-grid_column is applied to each column */
+.my-masonry-grid_column {
+  /* padding-left: 16px; /* Column gutter - adjust based on margin-left above */
+  /* background-clip: padding-box; */ /* Fix background color within padding */
+}
+
+/* Ensure items within columns stack vertically */
+.my-masonry-grid_column > div {
+  /* Styles for items within columns - handled by DraggableItem component now */
+  /* background: grey; */
+  /* margin-bottom: 16px; /* Space between items in a column */
+}
+
+/* Optional: Style the body or container */
+body {
+  background-color: #f7fafc; /* bg-gray-100 */
+}
