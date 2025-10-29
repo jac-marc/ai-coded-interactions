@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from 'react';
-import PageLoader from '../../components/PageLoader';
+import PageLoader from '../../components/Pageloader';
 import { BaseNeue } from '../../app/layout';
 
 export default function Home() {
