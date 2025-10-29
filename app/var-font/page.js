@@ -133,7 +133,7 @@ export default function Home() {
           fontVariationSettings: `'wght' ${fontWeight}`
         }}
       >
-        make me fat
+        make me bold
       </div>
 
       <div className="fixed bottom-8">
