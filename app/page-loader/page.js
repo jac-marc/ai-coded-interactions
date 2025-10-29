@@ -2,8 +2,8 @@
 "use client"
 
 import { useState } from 'react';
-import PageLoader from '/components/PageLoader';
-import { BaseNeue } from '../layout';
+import PageLoader from '../../components/PageLoader';
+import { BaseNeue } from '../../app/layout';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
