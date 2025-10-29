@@ -11,7 +11,7 @@ const Navbar = () => {
             <Link className="pr-10" href="/var-font-2">Variable font 2</Link>
             <Link className="pr-10" href="/blur-font">Blur</Link>
             <Link className="pr-10" href="/about">About</Link>
-            <Link className="pr-10" href="/tracker">Tracker</Link>
+            <Link className="pr-10" href="/endless-void">Void</Link>
         </nav>
     );
 }
