@@ -17,6 +17,7 @@ const nextConfig = {
   // webpack: (config) => {
   //   return config;
   // },
+  turbopack: {}, // add this to opt in / silence the webpack-vs-turbopack check
 };
 
 // 3. Wrap the config with PWA
