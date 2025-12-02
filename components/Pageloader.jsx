@@ -1,5 +1,5 @@
 // components/PageLoader.jsx
-import { BaseNeue } from '@/app/layout';
+import { BaseNeue } from '@/app/fonts';
 import localFont from 'next/font/local';
 import React, { useState, useEffect } from 'react';
 
