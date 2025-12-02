@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
         <meta name='description' content='Description' />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${BaseNeue.className} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${BaseNeue.className} antialiased bg-black text-white`}
       >
         <Navbar />
         {children}
@@ -38,3 +38,39 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
+
+import "./globals.css";
+
+// 1. Viewport settings (must be separate from metadata in Next.js 14+)
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false, // Prevents zooming on mobile
+  themeColor: "#000000",
+};
+
+// 2. Metadata settings (SEO & PWA)
+export const metadata = {
+  title: "3D Lens Effect",
+  description: "Interactive 3D Glass Distortion",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "3D Lens",
+  },
+};
+
+// 3. The Layout Component (Only ONE default export allowed)
+// export default function RootLayout({ children }) {
+//   return (
+//     <html lang="en">
+//       <body className="antialiased bg-black text-white">
+//         {children}
+//       </body>
+//     </html>
+//   );
+// }
+
+

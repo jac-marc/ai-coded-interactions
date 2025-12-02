@@ -12,6 +12,7 @@ const Navbar = () => {
             <Link className="pr-10" href="/blur-font">Blur</Link>
             <Link className="pr-10" href="/about">About</Link>
             <Link className="pr-10" href="/endless-void">Void</Link>
+            <Link className="pr-10" href="/3d-number">3d number</Link>
         </nav>
     );
 }
