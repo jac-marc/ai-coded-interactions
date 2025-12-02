@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import PageLoader from '../../components/Pageloader';
-import { BaseNeue } from '../../app/layout';
+import { BaseNeue } from '../fonts';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
