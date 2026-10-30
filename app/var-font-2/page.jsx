@@ -9,8 +9,7 @@ const robotoFlex = Roboto_Flex({
   display: 'swap',
 });
 
-export default function Home() {
-  const containerRef = useRef(null);
+export default function InteractiveVariableFontPage() {
   const letterRefs = useRef([]);
   const mouseXRef = useRef(0);
   const rafRef = useRef();
@@ -98,7 +97,7 @@ export default function Home() {
   
   return (
     <main className={`min-h-screen bg-black flex items-center justify-center overflow-hidden ${robotoFlex.className}`}>
-      <div ref={containerRef} className="relative px-8">
+      <div className="relative px-8">
         <h1 className="text-[120px] sm:text-[160px] md:text-[200px] lg:text-[260px] xl:text-[320px] text-white font-bold tracking-tight select-none leading-none">
           {text.split('').map((char, index) => (
             <span

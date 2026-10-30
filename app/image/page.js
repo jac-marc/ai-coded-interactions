@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import Navbar from '../navigation';
 
-export default function Home() {
+export default function ImageParallaxPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 });
   
   useEffect(() => {
@@ -26,8 +25,8 @@ export default function Home() {
   const imagePositionY = (0.5 - mousePosition.y) * 20; // 20px max movement vertically
   
   // Calculate image tilt (center is neutral)
-  const tiltX = (mousePosition.y - 0.5) * 15; // 5 degrees max tilt on X axis (vertical mouse movement)
-  const tiltY = (mousePosition.x - 0.5) * 15; // 5 degrees max tilt on Y axis (horizontal mouse movement)
+  const tiltX = (mousePosition.y - 0.5) * 15; // 15 degrees max tilt on X axis (vertical mouse movement)
+  const tiltY = (mousePosition.x - 0.5) * 15; // 15 degrees max tilt on Y axis (horizontal mouse movement)
   
   return (
     <div className="relative h-screen w-full overflow-hidden">

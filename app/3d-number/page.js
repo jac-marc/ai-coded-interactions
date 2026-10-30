@@ -2,10 +2,11 @@
 
 import React, { useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Text3D, Center, MeshTransmissionMaterial, Environment, Float } from "@react-three/drei";
+import { Text3D, Center, MeshTransmissionMaterial, Float } from "@react-three/drei";
 import * as THREE from "three";
 
 const FONT_URL = "https://threejs.org/examples/fonts/helvetiker_regular.typeface.json";
+const MESH_BACKGROUND_COLOR = new THREE.Color('#000000');
 
 function LensAndNumber() {
   const lensRef = useRef();
@@ -151,14 +152,14 @@ function LensAndNumber() {
           attenuationDistance={0.5}
           attenuationColor="#ffffff"
           color="#ffffff"
-          background={new THREE.Color('#000000')}
+          background={MESH_BACKGROUND_COLOR}
         />
       </mesh>
     </>
   );
 }
 
-export default function Page() {
+export default function ThreeDNumberPage() {
   const requestAccess = () => {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       DeviceOrientationEvent.requestPermission().catch(console.error);

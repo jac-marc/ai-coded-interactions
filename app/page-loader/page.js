@@ -1,11 +1,9 @@
-// pages/index.js
 "use client"
 
 import { useState } from 'react';
 import PageLoader from '../../components/Pageloader';
-import { BaseNeue } from '../../app/layout';
 
-export default function Home() {
+export default function PageLoaderPage() {
   const [loading, setLoading] = useState(true);
 
   const handleLoadingComplete = () => {

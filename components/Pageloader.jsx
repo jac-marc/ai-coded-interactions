@@ -1,9 +1,4 @@
-// components/PageLoader.jsx
-import { BaseNeue } from '@/app/layout';
-import localFont from 'next/font/local';
 import React, { useState, useEffect } from 'react';
-
-
 
 const PageLoader = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
@@ -13,6 +8,7 @@ const PageLoader = ({ onComplete }) => {
   
   // Smooth out the display number with animation
   useEffect(() => {
+    let animationFrameId;
     // Update display number smoothly to match actual progress
     const smoothenNumber = () => {
       if (displayProgress < progress) {
@@ -21,31 +17,41 @@ const PageLoader = ({ onComplete }) => {
           const increment = diff > 1 ? 1 : 0.1;
           return Math.min(prev + increment, progress);
         });
-        requestAnimationFrame(smoothenNumber);
+        animationFrameId = requestAnimationFrame(smoothenNumber);
       }
     };
     
-    requestAnimationFrame(smoothenNumber);
+    animationFrameId = requestAnimationFrame(smoothenNumber);
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
   }, [progress, displayProgress]);
   
   // Handle completion
   useEffect(() => {
+    let fadeTimer;
+    let completeTimer;
     if (progress >= 100 && displayProgress >= 100) {
       setCompleted(true);
       
       // Wait for 1 second before triggering fadeout
-      setTimeout(() => {
+      fadeTimer = setTimeout(() => {
         setFadeOut(true);
       }, 1000);
       
       // Wait for fadeout to complete before signaling completion
-      setTimeout(() => {
+      completeTimer = setTimeout(() => {
         onComplete && onComplete();
       }, 1500); // 1000ms pause + 500ms for fade out
     }
+    return () => {
+      if (fadeTimer) clearTimeout(fadeTimer);
+      if (completeTimer) clearTimeout(completeTimer);
+    };
   }, [progress, displayProgress, onComplete]);
   
   useEffect(() => {
+    let timerId;
     // Only run this once at component mount
     const simulateRealisticLoading = () => {
       let currentProgress = 0;
@@ -82,7 +88,7 @@ const PageLoader = ({ onComplete }) => {
         
         // Schedule the next increment
         if (currentProgress < 100) {
-          setTimeout(incrementProgress, pauseDuration);
+          timerId = setTimeout(incrementProgress, pauseDuration);
         }
       };
       
@@ -91,6 +97,9 @@ const PageLoader = ({ onComplete }) => {
     };
     
     simulateRealisticLoading();
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
   }, []);
   
   return (

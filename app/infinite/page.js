@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-export default function Page() {
-  const containerRef = useRef(null);
+export default function InfiniteMotionPage() {
   const [permissionNeeded, setPermissionNeeded] = useState(false);
   const [granted, setGranted] = useState(false);
 
@@ -141,7 +140,6 @@ export default function Page() {
 
   return (
     <div
-      ref={containerRef}
       className="relative flex h-dvh w-dvw items-center justify-center overflow-hidden bg-black text-white"
     >
       {/* Permission UI for iOS */}

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import styles from './particles.module.css';
 
 export default function ParticlesPage() {
   const canvasRef = useRef(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const mousePositionRef = useRef({ x: 0, y: 0 });
+  const windowSizeRef = useRef({ width: 0, height: 0 });
   const particlesRef = useRef([]);
   const animationFrameRef = useRef(null);
 
@@ -21,7 +21,7 @@ export default function ParticlesPage() {
     const updateCanvasSize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+      windowSizeRef.current = { width: window.innerWidth, height: window.innerHeight };
     };
     
     updateCanvasSize();
@@ -59,7 +59,7 @@ export default function ParticlesPage() {
 
     // Track mouse movement for focus effect only
     const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
+      mousePositionRef.current = { x: e.clientX, y: e.clientY };
     };
     
     window.addEventListener('mousemove', handleMouseMove);
@@ -70,7 +70,8 @@ export default function ParticlesPage() {
       
       // Calculate focus based on mouse position
       // Mouse at left edge = 0 (focus on far particles), right edge = 1 (focus on close particles)
-      const mouseXPercent = mousePosition.x / windowSize.width;
+      const currentWidth = windowSizeRef.current.width || window.innerWidth || 1;
+      const mouseXPercent = mousePositionRef.current.x / currentWidth;
       
       // Update and draw particles
       particlesRef.current.forEach(particle => {
@@ -127,9 +128,11 @@ export default function ParticlesPage() {
     return () => {
       window.removeEventListener('resize', updateCanvasSize);
       window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrameRef.current);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
-  }, [mousePosition, windowSize.width, windowSize.height]);
+  }, []);
 
   return (
     <div className={styles.container}>

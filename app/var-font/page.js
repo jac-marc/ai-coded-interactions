@@ -1,9 +1,14 @@
-// pages/index.js
-"use client"
-import { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
+"use client";
 
-export default function Home() {
+import { useState, useEffect, useRef } from 'react';
+import { Noto_Sans_JP } from 'next/font/google';
+
+const notoSansJP = Noto_Sans_JP({
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+export default function AudioVariableFontPage() {
   const [fontWeight, setFontWeight] = useState(100);
   const [isListening, setIsListening] = useState(false);
   const audioContextRef = useRef(null);
@@ -13,6 +18,10 @@ export default function Home() {
   const prevVolumeRef = useRef(0);
   const targetWeightRef = useRef(100);
   const currentWeightRef = useRef(100);
+
+  useEffect(() => {
+    document.title = "Audio-Responsive Font";
+  }, []);
 
   const startListening = async () => {
     try {
@@ -93,9 +102,7 @@ export default function Home() {
     
     // Update more frequently with smaller increments
     const roundedWeight = Math.round(currentWeightRef.current / 5) * 5; // Snap to increments of 5
-    if (Math.abs(fontWeight - roundedWeight) >= 5) {
-      setFontWeight(roundedWeight);
-    }
+    setFontWeight((prev) => (Math.abs(prev - roundedWeight) >= 5 ? roundedWeight : prev));
     
     // Continue analyzing
     animationFrameRef.current = requestAnimationFrame(analyzeAudio);
@@ -117,15 +124,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <Head>
-        <title>Audio-Responsive Font</title>
-      </Head>
-      
+    <div className={`flex flex-col items-center justify-center min-h-screen bg-gray-100 ${notoSansJP.className}`}>
       <div 
         className="text-center mb-16"
         style={{
-          fontFamily: "'Noto Sans JP', sans-serif",
           fontWeight: fontWeight,
           fontSize: "14vw",
           transition: "font-weight 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)", // Faster transition
@@ -160,11 +162,6 @@ export default function Home() {
           <div>Volume: {((fontWeight - 100) / 800 * 100).toFixed(0)}%</div>
         </div>
       )}
-      
-      {/* Add Noto Sans JP variable font for smoother transitions */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap');
-      `}</style>
     </div>
   );
 }
