@@ -136,7 +136,7 @@ export default function EmailGesturesPage() {
     // 1. DeviceMotionEvent: detects rapid rotation rate or acceleration jerk
     const handleDeviceMotion = (e) => {
       const now = Date.now();
-      if (now - lastGestureTimeRef.current < 750) return;
+      if (now - lastGestureTimeRef.current < 600) return;
 
       // Angular pitch velocity around X-axis (rotationRate.beta)
       const rotBeta = e.rotationRate?.beta;
@@ -146,13 +146,13 @@ export default function EmailGesturesPage() {
 
       // Check angular velocity snap threshold (deg/s)
       if (rotBeta !== null && rotBeta !== undefined) {
-        // Snapping upper part backward/upward: beta rotation rate < -120 deg/s
-        if (rotBeta < -110) {
+        // Snapping upper part backward/upward (reply): relaxed to -60 deg/s for effortless wrist flick
+        if (rotBeta < -60) {
           triggerSnapUp();
           return;
         }
-        // Snapping upper part forward/downward: beta rotation rate > 110 deg/s
-        if (rotBeta > 110) {
+        // Snapping upper part forward/downward (send): reduced to 75 deg/s
+        if (rotBeta > 75) {
           triggerSnapDown();
           return;
         }
@@ -160,9 +160,9 @@ export default function EmailGesturesPage() {
 
       // Check linear acceleration spike if rotationRate is not available
       if (accY !== undefined && accZ !== undefined) {
-        if (accZ > 12 && accY < -6) {
+        if ((accZ > 6 && accY < -3) || accZ > 9 || accY < -7) {
           triggerSnapUp();
-        } else if (accZ < -10 && accY > 6) {
+        } else if ((accZ < -6 && accY > 3) || accZ < -8 || accY > 6) {
           triggerSnapDown();
         }
       }
@@ -177,26 +177,26 @@ export default function EmailGesturesPage() {
       const history = betaHistoryRef.current;
       history.push({ beta, time: now });
 
-      // Keep only last 250ms of orientation history
-      while (history.length > 0 && now - history[0].time > 250) {
+      // Keep last 300ms of orientation history
+      while (history.length > 0 && now - history[0].time > 300) {
         history.shift();
       }
 
-      if (now - lastGestureTimeRef.current < 750) return;
+      if (now - lastGestureTimeRef.current < 600) return;
 
       if (history.length >= 2) {
         const oldest = history[0];
         const deltaBeta = beta - oldest.beta;
         const deltaTime = now - oldest.time;
 
-        if (deltaTime > 40 && deltaTime <= 250) {
-          // Sharp tilt back/up: deltaBeta < -24 degrees
-          if (deltaBeta < -22) {
+        if (deltaTime > 30 && deltaTime <= 300) {
+          // Sharp tilt back/up: lowered to -14 degrees for gentle snap
+          if (deltaBeta < -14) {
             triggerSnapUp();
             betaHistoryRef.current = [];
           }
-          // Sharp tilt forward/down: deltaBeta > +22 degrees
-          else if (deltaBeta > 22) {
+          // Sharp tilt forward/down: lowered to +16 degrees
+          else if (deltaBeta > 16) {
             triggerSnapDown();
             betaHistoryRef.current = [];
           }
