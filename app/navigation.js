@@ -25,11 +25,11 @@ const NAV_ITEMS = [
 const Navbar = () => {
     return (
         <nav
-            className={spaceGrotesk.className}
+            className={`${spaceGrotesk.className} flex flex-nowrap items-center overflow-x-auto whitespace-nowrap w-full p-[10px]`}
             style={{ fontOpticalSizing: 'auto', fontSizeAdjust: 'from-font' }}
         >
             {NAV_ITEMS.map(({ href, label }) => (
-                <Link key={href} className="pr-10" href={href}>
+                <Link key={href} className="pr-10 shrink-0" href={href}>
                     {label}
                 </Link>
             ))}
