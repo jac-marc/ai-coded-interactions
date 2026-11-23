@@ -59,32 +59,50 @@ function AiSummaryIcon({ className = 'w-[16px] h-[16px]' }) {
 export default function EmailGesturesPage() {
   // Navigation / stage: 1 = email view, 2 = reply view, 3 = inbox with confirmation
   const [stage, setStage] = useState(1);
-  const [replyText, setReplyText] = useState('Hi Marco,\n\nTomorrow at 10:30 works great for me. Let’s meet in the main conference room.');
-  
-  // Motion sensors & feedback state
-  const [permissionGranted, setPermissionGranted] = useState(false);
-  const [sensorStatus, setSensorStatus] = useState('Standby');
-  const [lastGesture, setLastGesture] = useState(null);
-  const [gestureFlash, setGestureFlash] = useState(null); // 'up' or 'down'
-  
+  const [replyText, setReplyText] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  const [showNotification, setShowNotification] = useState(true);
+  const [isNotificationFading, setIsNotificationFading] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const [showSendAlert, setShowSendAlert] = useState(false);
+
   const lastGestureTimeRef = useRef(0);
   const betaHistoryRef = useRef([]);
   const stageRef = useRef(stage);
+  const permissionRequestedRef = useRef(false);
 
   useEffect(() => {
     stageRef.current = stage;
   }, [stage]);
 
-  // Trigger stage change with haptic & visual feedback
+  // Handle 3s fade out for email sent notification in stage 3
+  useEffect(() => {
+    if (stage === 3) {
+      setShowNotification(true);
+      setIsNotificationFading(false);
+      const fadeTimer = setTimeout(() => {
+        setIsNotificationFading(true);
+      }, 3000);
+      const removeTimer = setTimeout(() => {
+        setShowNotification(false);
+      }, 3700);
+      return () => {
+        clearTimeout(fadeTimer);
+        clearTimeout(removeTimer);
+      };
+    } else {
+      setShowNotification(true);
+      setIsNotificationFading(false);
+    }
+  }, [stage]);
+
+  // Trigger stage change with haptic feedback
   const triggerSnapUp = useCallback(() => {
     const now = Date.now();
-    if (now - lastGestureTimeRef.current < 800) return;
+    if (now - lastGestureTimeRef.current < 650) return;
     lastGestureTimeRef.current = now;
 
     if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-    setLastGesture('Snap UP (Reply)');
-    setGestureFlash('up');
-    setTimeout(() => setGestureFlash(null), 600);
 
     if (stageRef.current === 1) {
       setStage(2);
@@ -93,44 +111,15 @@ export default function EmailGesturesPage() {
 
   const triggerSnapDown = useCallback(() => {
     const now = Date.now();
-    if (now - lastGestureTimeRef.current < 800) return;
+    if (now - lastGestureTimeRef.current < 650) return;
     lastGestureTimeRef.current = now;
 
     if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
-    setLastGesture('Snap DOWN (Send)');
-    setGestureFlash('down');
-    setTimeout(() => setGestureFlash(null), 600);
 
     if (stageRef.current === 2) {
-      setStage(3);
+      setShowSendAlert(true);
     }
   }, []);
-
-  // Request accelerometer permission (iOS 13+ requires user gesture)
-  const requestMotionPermission = async () => {
-    try {
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        const response = await DeviceMotionEvent.requestPermission();
-        if (response === 'granted') {
-          setPermissionGranted(true);
-          setSensorStatus('Active (iOS)');
-          startMotionListeners();
-        } else {
-          setSensorStatus('Denied');
-        }
-      } else {
-        // Android and standard browsers do not require explicit requestPermission
-        setPermissionGranted(true);
-        setSensorStatus('Active');
-        startMotionListeners();
-      }
-    } catch (err) {
-      console.warn('Motion permission error:', err);
-      setSensorStatus('Active');
-      setPermissionGranted(true);
-      startMotionListeners();
-    }
-  };
 
   const startMotionListeners = useCallback(() => {
     // 1. DeviceMotionEvent: detects rapid rotation rate or acceleration jerk
@@ -138,21 +127,18 @@ export default function EmailGesturesPage() {
       const now = Date.now();
       if (now - lastGestureTimeRef.current < 600) return;
 
-      // Angular pitch velocity around X-axis (rotationRate.beta)
       const rotBeta = e.rotationRate?.beta;
-      // Linear acceleration on Y / Z
+      const rotGamma = e.rotationRate?.gamma;
       const accY = e.acceleration?.y ?? e.accelerationIncludingGravity?.y;
       const accZ = e.acceleration?.z ?? e.accelerationIncludingGravity?.z;
 
       // Check angular velocity snap threshold (deg/s)
       if (rotBeta !== null && rotBeta !== undefined) {
-        // Snapping upper part backward/upward (reply): relaxed to -60 deg/s for effortless wrist flick
-        if (rotBeta < -60) {
+        if (rotBeta < -80) {
           triggerSnapUp();
           return;
         }
-        // Snapping upper part forward/downward (send): reduced to 75 deg/s
-        if (rotBeta > 75) {
+        if (rotBeta > 80) {
           triggerSnapDown();
           return;
         }
@@ -177,7 +163,6 @@ export default function EmailGesturesPage() {
       const history = betaHistoryRef.current;
       history.push({ beta, time: now });
 
-      // Keep last 300ms of orientation history
       while (history.length > 0 && now - history[0].time > 300) {
         history.shift();
       }
@@ -190,13 +175,10 @@ export default function EmailGesturesPage() {
         const deltaTime = now - oldest.time;
 
         if (deltaTime > 30 && deltaTime <= 300) {
-          // Sharp tilt back/up: lowered to -14 degrees for gentle snap
-          if (deltaBeta < -14) {
+          if (deltaBeta < -16) {
             triggerSnapUp();
             betaHistoryRef.current = [];
-          }
-          // Sharp tilt forward/down: lowered to +16 degrees
-          else if (deltaBeta > 16) {
+          } else if (deltaBeta > 18) {
             triggerSnapDown();
             betaHistoryRef.current = [];
           }
@@ -213,119 +195,128 @@ export default function EmailGesturesPage() {
     };
   }, [triggerSnapUp, triggerSnapDown]);
 
-  // Auto-init on mount if non-iOS (doesn't require prompt)
+  // Request motion permission and dismiss prompt
+  const handleEnableMotion = useCallback(async () => {
+    try {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        const response = await DeviceMotionEvent.requestPermission();
+        if (response === 'granted') {
+          permissionRequestedRef.current = true;
+          startMotionListeners();
+        }
+      } else {
+        permissionRequestedRef.current = true;
+        startMotionListeners();
+      }
+    } catch {
+      permissionRequestedRef.current = true;
+      startMotionListeners();
+    }
+    setShowPermissionPrompt(false);
+  }, [startMotionListeners]);
+
+  // Prompt user to enable motion sensors when loaded from a device
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        // iOS requires explicit tap
-        setSensorStatus('Tap to enable motion');
-      } else if ('DeviceMotionEvent' in window || 'DeviceOrientationEvent' in window) {
-        setPermissionGranted(true);
-        setSensorStatus('Active');
-        const cleanup = startMotionListeners();
-        return cleanup;
+      const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+        ('ontouchstart' in window) || 
+        (navigator.maxTouchPoints > 0);
+
+      if (isMobileDevice) {
+        setShowPermissionPrompt(true);
       } else {
-        setSensorStatus('Sensor not supported on this device');
+        startMotionListeners();
       }
     }
   }, [startMotionListeners]);
 
   return (
-    <div className="min-h-screen bg-[#111111] text-black flex flex-col items-center justify-start py-4 px-2 sm:px-4 font-['Inter',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]">
-      
-      {/* Sensor Info & Test HUD */}
-      <div className="w-full max-w-[420px] mb-3 bg-[#1e1e1e] text-white rounded-xl p-3 shadow-lg border border-[#333] text-xs">
-        <div className="flex items-center justify-between pb-2 border-b border-[#333]">
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${permissionGranted ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className="font-semibold uppercase tracking-wider text-[11px]">Accelerometer Gestures</span>
-          </div>
-          {!permissionGranted ? (
-            <button
-              onClick={requestMotionPermission}
-              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md font-medium transition"
-            >
-              Enable Motion
-            </button>
-          ) : (
-            <span className="text-emerald-400 text-[11px] font-mono">{sensorStatus}</span>
-          )}
-        </div>
-
-        {/* Dynamic gesture instructions */}
-        <div className="py-2 flex items-center justify-between text-neutral-300">
-          <div>
-            {stage === 1 && (
-              <span className="text-amber-300 flex items-center gap-1.5 font-medium">
-                <span className="animate-bounce">⬆</span> Snap top of phone <span className="underline">UPWARDS</span> to Reply
-              </span>
-            )}
-            {stage === 2 && (
-              <span className="text-emerald-300 flex items-center gap-1.5 font-medium">
-                <span className="animate-bounce">⬇</span> Snap top of phone <span className="underline">DOWNWARDS</span> to Send
-              </span>
-            )}
-            {stage === 3 && (
-              <span className="text-neutral-300 flex items-center gap-1.5">
-                <span>✓</span> Email Sent! Tap Marco Rossi to restart
-              </span>
-            )}
-          </div>
-          {lastGesture && (
-            <span className="text-[10px] text-neutral-400 font-mono">Last: {lastGesture}</span>
-          )}
-        </div>
-
-        {/* Manual Test Triggers (Desktop & Debug Testing) */}
-        <div className="flex items-center gap-2 pt-2 border-t border-[#333]">
-          <span className="text-[10px] text-neutral-400 uppercase tracking-wider">Test:</span>
-          <button
-            onClick={triggerSnapUp}
-            className={`flex-1 py-1 px-2 rounded font-medium text-[11px] transition ${
-              stage === 1 ? 'bg-amber-500 hover:bg-amber-400 text-black font-semibold' : 'bg-neutral-800 text-neutral-400'
-            }`}
-          >
-            Snap Up ↗
-          </button>
-          <button
-            onClick={triggerSnapDown}
-            className={`flex-1 py-1 px-2 rounded font-medium text-[11px] transition ${
-              stage === 2 ? 'bg-emerald-500 hover:bg-emerald-400 text-black font-semibold' : 'bg-neutral-800 text-neutral-400'
-            }`}
-          >
-            Snap Down ↘
-          </button>
-          <button
-            onClick={() => setStage(1)}
-            className="py-1 px-2 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px]"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-
+    <div
+      className="min-h-screen bg-[#111111] text-black flex flex-col items-center justify-start py-4 px-2 sm:px-4 font-['Inter',-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]"
+    >
       {/* Mobile Frame Container */}
-      <div 
-        className={`w-full max-w-[390px] min-h-[780px] bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col relative transition-all duration-300 border border-[#e0e3e5] ${
-          gestureFlash === 'up' ? 'ring-4 ring-amber-400 ring-offset-2' : ''
-        } ${gestureFlash === 'down' ? 'ring-4 ring-emerald-400 ring-offset-2' : ''}`}
-      >
+      <div className="w-full max-w-[390px] min-h-[780px] bg-white rounded-[24px] shadow-2xl overflow-hidden flex flex-col relative border border-[#e0e3e5]">
+
+        {/* Device Motion Permission Prompt */}
+        {showPermissionPrompt && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-[20px] p-[24px] w-full max-w-[320px] text-black shadow-2xl flex flex-col items-center text-center gap-[16px] border border-[#e0e3e5]">
+              <div className="w-[44px] h-[44px] rounded-full bg-[#c0dec2] flex items-center justify-center text-[20px]">
+                📱
+              </div>
+              <div className="flex flex-col gap-[6px]">
+                <h3 className="text-[19px] font-medium leading-[24px]">Enable Motion Sensors</h3>
+                <p className="text-[14px] text-neutral-600 leading-[20px]">
+                  Enable motion sensors to use snap gestures for replying and sending emails.
+                </p>
+              </div>
+              <div className="flex flex-col gap-[8px] w-full pt-1">
+                <button
+                  onClick={handleEnableMotion}
+                  className="w-full bg-black hover:bg-neutral-800 text-white py-[12px] px-[16px] rounded-[12px] text-[15px] font-medium transition cursor-pointer"
+                >
+                  Enable Motion
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPermissionPrompt(false);
+                    startMotionListeners();
+                  }}
+                  className="text-[13px] text-neutral-400 hover:text-black py-1 transition cursor-pointer"
+                >
+                  Continue without motion
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Send Email Confirmation Alert (Yes/No CTAs) */}
+        {showSendAlert && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-[20px] p-[24px] w-full max-w-[320px] shadow-2xl border border-[#e0e3e5] flex flex-col gap-[16px]">
+              <div className="flex flex-col gap-[6px]">
+                <h3 className="text-[19px] font-medium text-black leading-[24px]">Send email?</h3>
+                <p className="text-[14px] text-neutral-600 leading-[20px]">
+                  Are you ready to send your reply to <span className="text-black font-medium">marco.rossi@eurac.edu</span>?
+                </p>
+              </div>
+              <div className="flex gap-[10px] w-full pt-1">
+                <button
+                  onClick={() => setShowSendAlert(false)}
+                  className="flex-1 py-[12px] px-[14px] rounded-[12px] border border-[#d9dbe0] text-black text-[15px] font-medium hover:bg-neutral-50 transition cursor-pointer text-center"
+                >
+                  No
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSendAlert(false);
+                    setStage(3);
+                  }}
+                  className="flex-1 py-[12px] px-[14px] rounded-[12px] bg-black text-white text-[15px] font-medium hover:bg-neutral-800 transition cursor-pointer text-center"
+                >
+                  Yes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ----------------- STAGE 1: EMAIL VIEW (365:2) ----------------- */}
         {stage === 1 && (
           <div className="bg-white flex flex-col gap-[20px] items-start p-[24px] w-full flex-1" data-node-id="365:2" data-name="1. Email · Eurac colleague">
             {/* Email Toolbar */}
             <div className="border-[#e0e3e5] border-b pb-[12px] flex items-center justify-between w-full" data-node-id="369:2">
-              <button 
-                onClick={() => setStage(3)} 
-                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer" 
+              <button
+                onClick={() => setStage(3)}
+                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer"
                 data-node-id="369:6"
                 aria-label="Back"
               >
                 <BackIcon />
               </button>
-              <button 
-                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer" 
+              <button
+                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer"
                 data-node-id="369:9"
                 aria-label="Delete"
               >
@@ -408,17 +399,17 @@ export default function EmailGesturesPage() {
           <div className="bg-white flex flex-col gap-[20px] items-start p-[24px] w-full flex-1" data-node-id="373:2" data-name="2. Email · Reply">
             {/* Reply Toolbar */}
             <div className="border-[#e0e3e5] border-b pb-[12px] flex items-center justify-between w-full" data-node-id="373:3">
-              <button 
-                onClick={() => setStage(1)} 
-                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer" 
+              <button
+                onClick={() => setStage(1)}
+                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer"
                 data-node-id="373:4"
                 aria-label="Back"
               >
                 <BackIcon />
               </button>
-              <button 
+              <button
                 onClick={() => setStage(1)}
-                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer" 
+                className="flex h-[48px] items-center justify-center w-[44px] text-black hover:opacity-70 transition cursor-pointer"
                 data-node-id="373:7"
                 aria-label="Delete"
               >
@@ -456,26 +447,21 @@ export default function EmailGesturesPage() {
             </div>
 
             {/* Your Answer Textarea Container */}
-            <div className="bg-[#fafafa] border border-[#e0e3e5] rounded-[10px] p-[16px] w-full min-h-[160px] h-[240px] flex flex-col" data-node-id="373:28">
+            <div className="bg-[#fafafa] border border-[#e0e3e5] rounded-[10px] p-[16px] w-full min-h-[160px] h-[240px] flex flex-col relative" data-node-id="373:28">
               <textarea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                placeholder="| Write your answer here"
-                className="w-full h-full bg-transparent text-[16px] leading-[24px] text-black font-normal resize-none focus:outline-none placeholder:text-[rgba(0,0,0,0.6)]"
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                className="w-full h-full bg-transparent text-[16px] leading-[24px] text-black font-normal resize-none focus:outline-none caret-black"
                 data-node-id="373:29"
                 autoFocus
               />
-            </div>
-
-            {/* Send hint button as gesture fallback */}
-            <div className="w-full flex justify-end">
-              <button
-                onClick={triggerSnapDown}
-                className="bg-black hover:bg-neutral-800 text-white text-[14px] px-4 py-2 rounded-lg font-medium transition cursor-pointer flex items-center gap-2"
-              >
-                <span>Send (or snap down)</span>
-                <span>⬇</span>
-              </button>
+              {!replyText && !isFocused && (
+                <div className="absolute top-[18px] left-[16px] pointer-events-none flex items-center">
+                  <span className="inline-block w-[1.5px] h-[20px] bg-black animate-pulse" />
+                </div>
+              )}
             </div>
 
             {/* Quoted Previous Email */}
@@ -502,20 +488,29 @@ export default function EmailGesturesPage() {
         {stage === 3 && (
           <div className="bg-white flex flex-col gap-[20px] items-start p-[24px] w-full flex-1" data-node-id="384:2" data-name="3. Email · Inbox with sent confirmation">
             {/* Sent Notification Banner */}
-            <div className="bg-[#c0dec2] rounded-[10px] px-[16px] py-[14px] flex items-center gap-[12px] text-black w-full" data-node-id="386:2">
-              <span className="text-[20px] font-normal leading-none" data-node-id="386:3">
-                ✓
-              </span>
-              <div className="flex flex-1 flex-col gap-[4px]" data-node-id="386:4">
-                <p className="text-[16px] font-semibold leading-[22px]" data-node-id="386:5">
-                  Email sent
-                </p>
-                <div className="text-[14px] font-normal leading-[20px]" data-node-id="386:6">
-                  <p className="mb-0">Your reply was sent to</p>
-                  <p>marco.rossi@eurac.edu</p>
+            {showNotification && (
+              <div
+                className={`w-full transition-all duration-700 ease-out overflow-hidden ${isNotificationFading
+                  ? 'opacity-0 max-h-0 -translate-y-2 pointer-events-none'
+                  : 'opacity-100 max-h-[140px]'
+                  }`}
+              >
+                <div className="bg-[#c0dec2] rounded-[10px] px-[16px] py-[14px] flex items-center gap-[12px] text-black w-full" data-node-id="386:2">
+                  <span className="text-[20px] font-normal leading-none" data-node-id="386:3">
+                    ✓
+                  </span>
+                  <div className="flex flex-1 flex-col gap-[4px]" data-node-id="386:4">
+                    <p className="text-[16px] font-semibold leading-[22px]" data-node-id="386:5">
+                      Email sent
+                    </p>
+                    <div className="text-[14px] font-normal leading-[20px]" data-node-id="386:6">
+                      <p className="mb-0">Your reply was sent to</p>
+                      <p>marco.rossi@eurac.edu</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Inbox Header */}
             <div className="flex items-center justify-between w-full" data-node-id="386:7">
@@ -539,7 +534,7 @@ export default function EmailGesturesPage() {
             {/* Email Inbox List */}
             <div className="flex flex-col w-full" data-node-id="386:13">
               {/* Email 1: Marco Rossi (Clickable to restart flow) */}
-              <div 
+              <div
                 onClick={() => setStage(1)}
                 className="border-[#e0e3e5] border-b py-[14px] flex flex-col gap-[5px] w-full cursor-pointer hover:bg-neutral-50 transition rounded-lg px-1 -mx-1"
                 data-node-id="386:14"
